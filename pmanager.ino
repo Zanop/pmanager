@@ -1,13 +1,14 @@
 #define BUFSIZE 255
 #define PDBSIZE 10
+#define IFS " ,;"
 
 char key[20]="";
 int incomingByte = 0; // for incoming serial data
 
 struct pentry {
-    int id;
     char name[10]="Empty";
-    char pass[25]="****";  
+    char login[25];
+    char pass[25];
 };
 
 struct pentry pdb[PDBSIZE];
@@ -15,15 +16,12 @@ struct pentry pdb[PDBSIZE];
 void printpdb()
 {
   // Print header
-  Serial.println("ID\tNAME\tPASS");
+  Serial.println("NAME\tLOGIN\tPASS");
   for(int i=0;i<PDBSIZE;i++)
   {
-    Serial.print(pdb[i].id);
-    Serial.print("\t");
-    Serial.print(pdb[i].name);
-    Serial.print("\t");
-    Serial.print(pdb[i].pass);
-    Serial.println();
+    Serial.print(pdb[i].name); Serial.print("\t");
+    Serial.print(pdb[i].login); Serial.print("\t");
+    Serial.print(pdb[i].pass); Serial.println();
   }
 }
 
@@ -50,7 +48,7 @@ void setup() {
   Serial.begin(9600);
   while(incomingByte==0)
   {
-    Serial.println("Waiting user...");
+    Serial.println("Waiting user.");
     if (Serial.available() > 0) 
     {
       // read the incoming byte:
@@ -62,14 +60,49 @@ void setup() {
     }
     delay(1000);
   }
-  Serial.println("Started.");
+  Serial.println("Starting...");
   printpdb();
 }
 
 void loop() {
-    int bytesRead=0;
+    int bytesRead=0, tmpid;
     char buff[BUFSIZE]= { 0 };
+    char* token;
+    
+
+    // Print the prompt
+    Serial.print("> ");
     bytesRead = readln(buff, BUFSIZE);
     Serial.println(buff);
+    token = strtok(buff, IFS);
+    Serial.println(token);
+    if( strcmp(token,"add")==0 )
+    {
+      Serial.println("Add");
+      // Read the id
+      token = strtok(NULL, IFS);
+      tmpid = atoi(token);
+      // Read NAME
+      token = strtok(NULL, IFS);
+      strncpy(pdb[tmpid].name, token, 10);
+      // Read LOGIN
+      token = strtok(NULL, IFS);
+      strncpy(pdb[tmpid].login, token, 25);    
+      // Read PASS
+      token = strtok(NULL, IFS);
+      strncpy(pdb[tmpid].pass, token, 25);    
+    } 
+    else if ( strcmp(token,"del")==0)
+    {
+      Serial.println("Delete");
+    } 
+    else if ( strcmp(token, "print")==0 )
+    {
+      printpdb();
+    }
+    else
+    {
+      Serial.println("Default");
+    }
     delay(100);
 }
