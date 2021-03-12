@@ -43,37 +43,11 @@ int readln(char * buf, int len)
   return(bytesRead);
 }
 
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(9600);
-  while(incomingByte==0)
-  {
-    Serial.println("Waiting user.");
-    if (Serial.available() > 0) 
-    {
-      // read the incoming byte:
-      incomingByte = Serial.read();
-  
-      // say what you got:
-      // Serial.print("I received: ");
-    // Serial.println(incomingByte, DEC);
-    }
-    delay(1000);
-  }
-  Serial.println("Starting...");
-  printpdb();
-}
-
-void loop() {
-    int bytesRead=0, tmpid;
-    char buff[BUFSIZE]= { 0 };
+void serialCmd(char * buff)
+{
+    int tmpid;
     char* token;
     
-
-    // Print the prompt
-    Serial.print("> ");
-    bytesRead = readln(buff, BUFSIZE);
-    Serial.println(buff);
     token = strtok(buff, IFS);
     Serial.println(token);
     if( strcmp(token,"add")==0 )
@@ -95,6 +69,9 @@ void loop() {
     else if ( strcmp(token,"del")==0)
     {
       Serial.println("Delete");
+      digitalWrite(10, HIGH);   // turn the LED on (HIGH is the voltage level)
+      delay(30);                       // wait for a second
+      digitalWrite(10, LOW);    // turn the LED off by making the voltage LOW
     } 
     else if ( strcmp(token, "print")==0 )
     {
@@ -104,5 +81,36 @@ void loop() {
     {
       Serial.println("Default");
     }
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  while(incomingByte==0)
+  {
+    Serial.println("Waiting user.");
+    if (Serial.available() > 0) 
+    {
+      // read the incoming byte:
+      incomingByte = Serial.read();
+  
+      // say what you got:
+      // Serial.print("I received: ");
+    // Serial.println(incomingByte, DEC);
+    }
+    delay(1000);
+  }
+  Serial.println("Starting...");
+  printpdb();
+  pinMode(10, OUTPUT);
+}
+
+void loop() {
+    int bytesRead=0;
+    char buff[BUFSIZE]= { 0 };
+    // Print the prompt
+    Serial.print("> ");
+    bytesRead = readln(buff, BUFSIZE);
+    serialCmd(buff);
     delay(100);
 }
