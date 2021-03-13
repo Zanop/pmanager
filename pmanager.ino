@@ -1,12 +1,15 @@
+#include <ctype.h>
+
 #define BUFSIZE 255
 #define PDBSIZE 10
 #define IFS " ,;"
 
 char key[20]="";
 int incomingByte = 0; // for incoming serial data
+int serialbytesRead=0;
 
 struct pentry {
-    char name[10]="Empty";
+    char name[10];
     char login[25];
     char pass[25];
 };
@@ -27,21 +30,27 @@ void printpdb()
 
 int readln(char * buf, int len)
 {
-  incomingByte = 0;
-  int bytesRead=0;
-  while( (incomingByte != '\n') && (bytesRead < len) )
+  int result=0;
+  while(Serial.available() > 0) 
   {
-    if (Serial.available() > 0) 
+    // read the incoming byte:
+    incomingByte = Serial.read();
+    if( (incomingByte != '\n') && (serialbytesRead < len) )
     {
-      // read the incoming byte:
-      incomingByte = Serial.read();
-      buf[bytesRead]=incomingByte;
-      bytesRead++;
+      buf[serialbytesRead]=incomingByte;
+      serialbytesRead++;
+      Serial.print(".");
+    }
+    else
+    {
+      buf[serialbytesRead]='\0';
+      result=serialbytesRead;
+      serialbytesRead=0;
+      return(result);
     }
   }
-  buf[bytesRead-1]='\0';
-  return(bytesRead);
-}
+  return(0);
+ }
 
 void serialCmd(char * buff)
 {
@@ -55,6 +64,13 @@ void serialCmd(char * buff)
       Serial.println("Add");
       // Read the id
       token = strtok(NULL, IFS);
+      for(int j=0;j<strlen(token);j++)
+      {
+        if( isdigit(token[j]) )
+          continue;
+        Serial.println("ID must be a number!");
+        return(10);
+      }
       tmpid = atoi(token);
       // Read NAME
       token = strtok(NULL, IFS);
@@ -100,17 +116,22 @@ void setup() {
     }
     delay(1000);
   }
-  Serial.println("Starting...");
-  printpdb();
+  Serial.println("Ready.");
   pinMode(10, OUTPUT);
+  Serial.print( "> " );
 }
 
 void loop() {
     int bytesRead=0;
     char buff[BUFSIZE]= { 0 };
-    // Print the prompt
-    Serial.print("> ");
+
     bytesRead = readln(buff, BUFSIZE);
-    serialCmd(buff);
-    delay(100);
+    if(bytesRead)
+    {
+      Serial.print(bytesRead); Serial.print(":"); Serial.println(buff);
+      
+      serialCmd(buff);
+      Serial.print( "> " );
+    }
+    bytesRead=0;
 }
