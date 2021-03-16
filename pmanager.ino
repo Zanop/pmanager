@@ -11,6 +11,8 @@
 int incomingByte = 0; // for incoming serial data
 int serialbytesRead=0;
 char mode='s';
+char buff[BUFSIZE]="\0";
+int bytesRead=0;
 
 struct pentry 
 {
@@ -39,6 +41,18 @@ struct key keys[] =
 };
 unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 
+void printUsage()
+{
+  Serial.println("Commands: add | print | pk | help");
+  Serial.println(Usage:);
+  Serial.println(" add INDEX NAME LOGIN PASSWORD");
+  Serial.println("INDEX := [0..9]; NAME := STRING[10], LOGIN := STRING[25], PASSWORD := STRING[25]");
+  Serial.println("Addin over used index overwrites the entry!");
+  Serial.println("print - prints the database.");
+  Serial.println("pk - prints the keys (debug info)");
+  Serial.println("help - prints this.");
+}
+
 void serialPrintpdb()
 {
   // Print header
@@ -48,13 +62,16 @@ void serialPrintpdb()
     Serial.print(i); Serial.print("\t");
     Serial.print(pdb[i].name); Serial.print("\t");
     Serial.print(pdb[i].login); Serial.print("\t");
-    Serial.print(pdb[i].pass); Serial.println();
+    if(strlen(pdb[i].pass)) Serial.print("************"); 
+    Serial.println();
   }
 }
 
 int serialReadln(char * buf, int len)
 {
   int result=0;
+  char echo[1];
+  
   while(Serial.available() > 0) 
   {
     // read the incoming byte:
@@ -63,8 +80,13 @@ int serialReadln(char * buf, int len)
     {
       buf[serialbytesRead]=incomingByte;
       serialbytesRead++;
+      // echo as we type
+      sprintf(echo, "%c", incomingByte);
+      Serial.print(echo);
       #if (DEBUG > 1)
-      Serial.print(".");
+      Serial.print("%"); Serial.print(buf);
+      Serial.print("%");
+      Serial.println(incomingByte);
       #endif /* DEBUG */
     }
     else
@@ -72,6 +94,7 @@ int serialReadln(char * buf, int len)
       buf[serialbytesRead]='\0';
       result=serialbytesRead;
       serialbytesRead=0;
+      Serial.println();
       return(result);
     }
   }
@@ -84,7 +107,7 @@ int serialCmd(char * buff)
     char* token;
     
     token = strtok(buff, IFS);
-    Serial.println(token);
+    //Serial.println(token);
 
     // Add new passwrd entry
     if( strcmp(token,"add")==0 )
@@ -144,6 +167,10 @@ int serialCmd(char * buff)
       Serial.println("PrintKeys");
       #endif
       printKeys();
+    } 
+    else if (strcmp(token,"help")==0)
+    {
+      printUsage();
     }
     else
     {
@@ -231,32 +258,34 @@ void becomeSerial()
 
 void setup() {
   // put your setup code here, to run once:
+  
   Serial.begin(9600);
+  while (!Serial) ;
+/*
   while(incomingByte==0)
   {
-    Serial.println("Waiting user.");
+    //Serial.println("Waiting user.");
     if (Serial.available() > 0) 
     {
       // read the incoming byte:
       incomingByte = Serial.read();
     }
-    delay(1000);
+    delay(50);
   }
-  // Mode button;
+*/
+  Serial.print("Keys on pins: ");
   for(int i;i<numKeys;i++)
   {
     pinMode(keys[i].pin, INPUT_PULLUP);
-    Serial.println(keys[i].pin);
+    Serial.print(keys[i].pin); Serial.print(" ");
   }
+  Serial.println();
   Serial.println("Ready.");
-  pinMode(10, OUTPUT);
   Serial.print( "> " );
 }
 
 void loop() {
-    int bytesRead=0;
-    char buff[BUFSIZE]= { 0 };
-
+    
     bytesRead = serialReadln(buff, BUFSIZE);
     if(bytesRead)
     {
@@ -278,13 +307,13 @@ void loop() {
     }
     if(keys[2].active && mode=='s')
     {
-      Serial.println("Keyboard on.");
+      Serial.println("Keyboard on.");Serial.print( "> " );
       becomeKeyboard();
     }
 
     else if( (!keys[2].active) && mode=='k')
     {
-      Serial.println("Keyboard off.");
+      Serial.println("Keyboard off.");Serial.print( "> " );
       becomeSerial();
     }
 }
