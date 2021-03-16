@@ -1,14 +1,16 @@
 #include <ctype.h>
+#include "Keyboard.h"
 
 #define BUFSIZE 255
 #define PDBSIZE 10
 #define IFS " ,;"
 #define DEBOUNCE_TIME 50
 
-#define DEBUG 1
+#define DEBUG 0
 
 int incomingByte = 0; // for incoming serial data
 int serialbytesRead=0;
+char mode='s';
 
 struct pentry 
 {
@@ -25,13 +27,15 @@ struct key
     bool inTrans;
     bool active;
     unsigned int debounce;
+    bool sticky;
 };
 
 struct pentry pdb[PDBSIZE];
 struct key keys[] = 
 {
-  { 2, 0, HIGH, false, false, 100 }
- // { 3, 0, HIGH, false, false }
+  { 2, 0, HIGH, false, false, 50, 0 },
+  { 3, 0, HIGH, false, false, 50, 0 },
+  { 9, 0, HIGH, false, false, 50, 1 }
 };
 unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 
@@ -157,6 +161,8 @@ void readKeys()
   {
     boolean currentVal = digitalRead(keys[i].pin);
     unsigned long transTime = currentTime - keys[i].lastChangeTime;
+
+    if(keys[i].sticky==false) keys[i].active=false;
     
     if(currentVal != keys[i].prevVal)
     {
@@ -164,36 +170,33 @@ void readKeys()
       if(currentVal == LOW)
       {
         keys[i].inTrans = true;
+        #if (DEBUG > 0)
         Serial.println("[TRANS]");
+        #endif
       }
       else
       {
         // Reset transition to debounce
         keys[i].inTrans = false;
+        keys[i].active=false;
+        #if (DEBUG > 0)
         Serial.println("[RELEASE]");
-/*
-        if(transTime>keys[i].debounce)
-        {
-          //keys[i].inTrans = false;
-          keys[i].active=true;
-          Serial.println("[ACTIVE]");
-        }
-        else
-        {
-          Serial.println("[DEACT]");
-        }
-*/
+        #endif
       }
       keys[i].prevVal = currentVal;
       continue;
     }
+    // Common debounce for all keys
     //if(keys[i].inTrans && (transTime>DEBOUNCE_TIME) )
- 
+    
+    // each key can have different debounce time.
     if(keys[i].inTrans && (transTime>keys[i].debounce) )
     {
       keys[i].active=true;
       keys[i].inTrans=false;
+      #if (DEBUG > 0)
       Serial.println("[ACTIVE]");
+      #endif
     }
  
   }
@@ -212,6 +215,18 @@ void printKeys()
   }  
 }
 
+void becomeKeyboard()
+{
+  Keyboard.begin();
+  mode='k';
+}
+
+void becomeSerial()
+{
+  Keyboard.end();
+  mode='s';
+}
+
 // SETUP HERE
 
 void setup() {
@@ -227,9 +242,10 @@ void setup() {
     }
     delay(1000);
   }
+  // Mode button;
   for(int i;i<numKeys;i++)
   {
-    pinMode(keys[i].pin, INPUT);
+    pinMode(keys[i].pin, INPUT_PULLUP);
     Serial.println(keys[i].pin);
   }
   Serial.println("Ready.");
@@ -252,10 +268,23 @@ void loop() {
       Serial.print( "> " );
     }
     readKeys();
-    if(keys[0].active)
+    if(keys[0].active && mode=='k')
     {
-      Serial.println("[2]");
-      keys[0].active=false;
+      Keyboard.print(pdb[0].pass);
     }
-    //Serial.println(digitalRead(2));     
+     if(keys[1].active && mode=='k')
+    {
+      Keyboard.print(pdb[1].pass);
+    }
+    if(keys[2].active && mode=='s')
+    {
+      Serial.println("I am keyboard");
+      becomeKeyboard();
+    }
+
+    else if( (!keys[2].active) && mode=='k')
+    {
+      Serial.println("I am serial");
+      becomeSerial();
+    }
 }
