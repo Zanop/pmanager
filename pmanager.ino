@@ -59,7 +59,7 @@ int serialReadln(char * buf, int len)
   {
     // read the incoming byte:
     incomingByte = Serial.read();
-    if( (incomingByte != '\n') && (serialbytesRead < len) )
+    if( (incomingByte != '\n') && (incomingByte != '\r') && (serialbytesRead < len) )
     {
       buf[serialbytesRead]=incomingByte;
       serialbytesRead++;
@@ -78,7 +78,7 @@ int serialReadln(char * buf, int len)
   return(0);
  }
 
-void serialCmd(char * buff)
+int serialCmd(char * buff)
 {
     int tmpid;
     char* token;
@@ -278,13 +278,13 @@ void loop() {
     }
     if(keys[2].active && mode=='s')
     {
-      Serial.println("I am keyboard");
+      Serial.println("Keyboard on.");
       becomeKeyboard();
     }
 
     else if( (!keys[2].active) && mode=='k')
     {
-      Serial.println("I am serial");
+      Serial.println("Keyboard off.");
       becomeSerial();
     }
 }
