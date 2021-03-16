@@ -3,7 +3,7 @@
 
 #define BUFSIZE 255
 #define PDBSIZE 10
-#define IFS " ,;"
+#define IFS " "
 #define DEBOUNCE_TIME 50
 
 #define DEBUG 0
