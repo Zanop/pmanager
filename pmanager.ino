@@ -44,7 +44,7 @@ unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 void printUsage()
 {
   Serial.println("Commands: add | print | pk | help");
-  Serial.println(Usage:);
+  Serial.println("Usage:");
   Serial.println(" add INDEX NAME LOGIN PASSWORD");
   Serial.println("INDEX := [0..9]; NAME := STRING[10], LOGIN := STRING[25], PASSWORD := STRING[25]");
   Serial.println("Addin over used index overwrites the entry!");
