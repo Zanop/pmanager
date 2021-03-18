@@ -60,22 +60,7 @@ struct key keys[] =
 };
 unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 
-#define FROWS 16
-#define FCOLS 8
 
-unsigned short f[FROWS][FCOLS];
-
-int print_frame(unsigned short *f)
-{
-    for(short row=0;row<FROWS;row++)
-    {
-      for(short col=0;col<FCOLS;col++)
-      {
-        display.drawPixel(row+64, col, f++>8?WHITE:BLACK);
-      }
-    }
-}
-/*
 void printUsage()
 {
   Serial.println("Commands: add | print | pk | help");
@@ -87,7 +72,7 @@ void printUsage()
   Serial.println("pk - prints the keys (debug info)");
   Serial.println("help - prints this.");
 }
-*/
+
 void serialPrintpdb()
 {
   // Print header
@@ -196,7 +181,6 @@ int serialCmd(char * buff)
       #endif
       serialPrintpdb();
     }
-    /*
     else if (strcmp(token,"pk")==0)
     {
       #if (DEBUG > 0)
@@ -204,7 +188,6 @@ int serialCmd(char * buff)
       #endif
       printKeys();
     } 
-    */
     else if (strcmp(token,"help")==0)
     {
       //printUsage();
@@ -265,7 +248,7 @@ void readKeys()
  
   }
 }
-/*
+
 void printKeys()
 {
   for(int i=0;i<numKeys;i++)
@@ -278,7 +261,6 @@ void printKeys()
     Serial.println();
   }  
 }
-*/
 
 // SETUP HERE
 void setup() {
@@ -361,30 +343,6 @@ void loop() {
       display.println(F("Keys OFF"));
       display.display();      // Show in
     }
-    // FLAME
 
-  for(int col=0;col<FCOLS;col++)
-  {
-  //   random(10+random(100));
-     if(random(9)==1)
-       f[FROWS-1][col]=15;
-  //   random(10+random(100));
-     if(random(9)==1 && f[FROWS-1][col]==15)
-       f[FROWS-1][col]=0;
-  }
-  for(int col=0;col<FCOLS;col++)
-      sum+=f[FROWS-1][col];
-    sum=sum/32;
-  
-  
-    // Propagate fire
-    for(int col=1;col<FCOLS;col++)
-    {
-      for(int row=FROWS-1;row>=0;row--)
-      {
-        f[row][col] = (f[row+1][col-1] + f[row+1][col] + f[row+1][col+1])/3;
-      }
-    }
-    print_frame((unsigned short *)f);
-    display.display();
+//    display.display();
 }
