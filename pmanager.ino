@@ -1,8 +1,24 @@
 #include <ctype.h>
 #include "Keyboard.h"
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+// Declaration for SSD1306 display connected using software SPI (default case):
+#define OLED_MOSI  20
+#define OLED_CLK   21
+#define OLED_DC    18
+#define OLED_CS    15
+#define OLED_RESET 19
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
+  OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
+ 
 #define BUFSIZE 255
-#define PDBSIZE 10
+#define PDBSIZE 6
 #define IFS " "
 #define DEBOUNCE_TIME 50
 
@@ -35,12 +51,31 @@ struct key
 struct pentry pdb[PDBSIZE];
 struct key keys[] = 
 {
-  { 2, 0, HIGH, false, false, 50, 0 },
-  { 3, 0, HIGH, false, false, 50, 0 },
-  { 9, 0, HIGH, false, false, 50, 1 }
+  { 4, 0, HIGH, false, false, 50, 0 },
+  { 5, 0, HIGH, false, false, 50, 0 },
+  { 6, 0, HIGH, false, false, 50, 0 },
+  { 7, 0, HIGH, false, false, 50, 0 },
+  { 8, 0, HIGH, false, false, 50, 0 },
+  { 9, 0, HIGH, false, false, 50, 0 }
 };
 unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 
+#define FROWS 16
+#define FCOLS 8
+
+unsigned short f[FROWS][FCOLS];
+
+int print_frame(unsigned short *f)
+{
+    for(short row=0;row<FROWS;row++)
+    {
+      for(short col=0;col<FCOLS;col++)
+      {
+        display.drawPixel(row+64, col, f++>8?WHITE:BLACK);
+      }
+    }
+}
+/*
 void printUsage()
 {
   Serial.println("Commands: add | print | pk | help");
@@ -52,7 +87,7 @@ void printUsage()
   Serial.println("pk - prints the keys (debug info)");
   Serial.println("help - prints this.");
 }
-
+*/
 void serialPrintpdb()
 {
   // Print header
@@ -161,6 +196,7 @@ int serialCmd(char * buff)
       #endif
       serialPrintpdb();
     }
+    /*
     else if (strcmp(token,"pk")==0)
     {
       #if (DEBUG > 0)
@@ -168,9 +204,10 @@ int serialCmd(char * buff)
       #endif
       printKeys();
     } 
+    */
     else if (strcmp(token,"help")==0)
     {
-      printUsage();
+      //printUsage();
     }
     else
     {
@@ -228,7 +265,7 @@ void readKeys()
  
   }
 }
-
+/*
 void printKeys()
 {
   for(int i=0;i<numKeys;i++)
@@ -241,38 +278,21 @@ void printKeys()
     Serial.println();
   }  
 }
-
-void becomeKeyboard()
-{
-  Keyboard.begin();
-  mode='k';
-}
-
-void becomeSerial()
-{
-  Keyboard.end();
-  mode='s';
-}
+*/
 
 // SETUP HERE
-
 void setup() {
-  // put your setup code here, to run once:
-  
   Serial.begin(9600);
   while (!Serial) ;
-/*
-  while(incomingByte==0)
-  {
-    //Serial.println("Waiting user.");
-    if (Serial.available() > 0) 
-    {
-      // read the incoming byte:
-      incomingByte = Serial.read();
-    }
-    delay(50);
+
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
   }
-*/
+  display.clearDisplay();
+  display.drawPixel(10, 10, SSD1306_WHITE);
+  display.display();
   Serial.print("Keys on pins: ");
   for(int i;i<numKeys;i++)
   {
@@ -285,7 +305,7 @@ void setup() {
 }
 
 void loop() {
-    
+    int sum=0;
     bytesRead = serialReadln(buff, BUFSIZE);
     if(bytesRead)
     {
@@ -301,19 +321,70 @@ void loop() {
     {
       Keyboard.print(pdb[0].pass);
     }
-     if(keys[1].active && mode=='k')
+    if(keys[1].active && mode=='k')
     {
       Keyboard.print(pdb[1].pass);
     }
-    if(keys[2].active && mode=='s')
+    if(keys[2].active && mode=='k')
+    {
+      Keyboard.print(pdb[2].pass);
+    }
+    if(keys[3].active && mode=='k')
+    {
+      Keyboard.print(pdb[3].pass);
+    }
+    if(keys[4].active && mode=='k')
+    {
+      Keyboard.print(pdb[4].pass);
+    }
+    if(keys[5].active && mode=='s')
     {
       Serial.println("Keyboard on.");Serial.print( "> " );
-      becomeKeyboard();
+      Keyboard.begin();
+      mode='k';
+      display.clearDisplay();
+      display.setTextSize(2);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(10, 0);
+      display.println(F("Keys ON"));
+      display.display();      // Show in
     }
-
-    else if( (!keys[2].active) && mode=='k')
+    else if( (keys[5].active) && mode=='k')
     {
       Serial.println("Keyboard off.");Serial.print( "> " );
-      becomeSerial();
+      Keyboard.end();
+      mode='s';
+      display.clearDisplay();
+      display.setTextSize(2);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(10, 0);
+      display.println(F("Keys OFF"));
+      display.display();      // Show in
     }
+    // FLAME
+
+  for(int col=0;col<FCOLS;col++)
+  {
+  //   random(10+random(100));
+     if(random(9)==1)
+       f[FROWS-1][col]=15;
+  //   random(10+random(100));
+     if(random(9)==1 && f[FROWS-1][col]==15)
+       f[FROWS-1][col]=0;
+  }
+  for(int col=0;col<FCOLS;col++)
+      sum+=f[FROWS-1][col];
+    sum=sum/32;
+  
+  
+    // Propagate fire
+    for(int col=1;col<FCOLS;col++)
+    {
+      for(int row=FROWS-1;row>=0;row--)
+      {
+        f[row][col] = (f[row+1][col-1] + f[row+1][col] + f[row+1][col+1])/3;
+      }
+    }
+    print_frame((unsigned short *)f);
+    display.display();
 }
