@@ -4,23 +4,25 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+// #include <Fonts/Org_01.h>
+
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-// Declaration for SSD1306 display connected using software SPI (default case):
-#define OLED_MOSI  20
-#define OLED_CLK   21
-#define OLED_DC    18
-#define OLED_CS    15
-#define OLED_RESET 19
+#define OLED_DC     18
+#define OLED_CS     10
+#define OLED_RESET  19
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
-  OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
- 
+  &SPI, OLED_DC, OLED_RESET, OLED_CS);
+
+
+
 #define BUFSIZE 255
-#define PDBSIZE 6
+#define PDBSIZE 5
 #define IFS " "
 #define DEBOUNCE_TIME 50
+#define SCREEN_REFRESH 100
 
 #define DEBUG 0
 
@@ -29,38 +31,38 @@ int serialbytesRead=0;
 char mode='s';
 char buff[BUFSIZE]="\0";
 int bytesRead=0;
+unsigned long lastScreenUpdate;
 
 struct pentry 
 {
-    char name[10];
-    char login[25];
+    char tag[7];
     char pass[25];
 };
 
 struct key 
 {
-    unsigned short pin;
+    byte pin;
     unsigned long lastChangeTime;
     bool prevVal;
     bool inTrans;
     bool active;
-    unsigned int debounce;
+    byte debounce;
     bool sticky;
 };
 
 struct pentry pdb[PDBSIZE];
 struct key keys[] = 
 {
-  { 4, 0, HIGH, false, false, 50, 0 },
-  { 5, 0, HIGH, false, false, 50, 0 },
-  { 6, 0, HIGH, false, false, 50, 0 },
-  { 7, 0, HIGH, false, false, 50, 0 },
-  { 8, 0, HIGH, false, false, 50, 0 },
+  { 4, 0, HIGH, false, false, 30, 0 },
+  { 5, 0, HIGH, false, false, 30, 0 },
+  { 6, 0, HIGH, false, false, 30, 0 },
+  { 7, 0, HIGH, false, false, 30, 0 },
+  { 8, 0, HIGH, false, false, 30, 0 },
   { 9, 0, HIGH, false, false, 50, 0 }
 };
 unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 
-
+/*
 void printUsage()
 {
   Serial.println("Commands: add | print | pk | help");
@@ -72,16 +74,16 @@ void printUsage()
   Serial.println("pk - prints the keys (debug info)");
   Serial.println("help - prints this.");
 }
-
+*/
 void serialPrintpdb()
 {
   // Print header
-  Serial.println("ID\tNAME\tLOGIN\tPASS");
+  // Serial.println("ID\tTAG\tLOGIN\tPASS");
+  Serial.println("ID\tTAG\tPASS");
   for(int i=0;i<PDBSIZE;i++)
   {
-    Serial.print(i); Serial.print("\t");
-    Serial.print(pdb[i].name); Serial.print("\t");
-    Serial.print(pdb[i].login); Serial.print("\t");
+    Serial.print(i+1); Serial.print("\t");
+    Serial.print(pdb[i].tag); Serial.print("\t");
     if(strlen(pdb[i].pass)) Serial.print("************"); 
     Serial.println();
   }
@@ -127,7 +129,7 @@ int serialCmd(char * buff)
     char* token;
     
     token = strtok(buff, IFS);
-    //Serial.println(token);
+    Serial.println(token);
 
     // Add new passwrd entry
     if( strcmp(token,"add")==0 )
@@ -137,7 +139,6 @@ int serialCmd(char * buff)
       #endif
       // Read the id
       token = strtok(NULL, IFS);
-
       // Check if the first argument is a number
       for(int j=0;j<strlen(token);j++)
       {
@@ -146,22 +147,26 @@ int serialCmd(char * buff)
         Serial.println("ID must be a number!");
         return(10);
       }
-      tmpid = atoi(token);
+      tmpid = atoi(token)-1;
       
-      if(tmpid>PDBSIZE-1)
+      if(tmpid>PDBSIZE-1 || tmpid <0)
       {
         Serial.println("entry id out of range!");
         return(20);
       }
       // Read NAME
       token = strtok(NULL, IFS);
-      strncpy(pdb[tmpid].name, token, 10);
+      strncpy(pdb[tmpid].tag, token, 6);
+      pdb[tmpid].tag[6]='\0';
+      /*
       // Read LOGIN
       token = strtok(NULL, IFS);
       strncpy(pdb[tmpid].login, token, 25);    
+      */
       // Read PASS
       token = strtok(NULL, IFS);
-      strncpy(pdb[tmpid].pass, token, 25);    
+      strncpy(pdb[tmpid].pass, token, 24);
+      pdb[tmpid].pass[24]='\0';
     }
     // Delete entry( probably never gonna be used)
     else if ( strcmp(token,"del")==0)
@@ -181,13 +186,6 @@ int serialCmd(char * buff)
       #endif
       serialPrintpdb();
     }
-    else if (strcmp(token,"pk")==0)
-    {
-      #if (DEBUG > 0)
-      Serial.println("PrintKeys");
-      #endif
-      printKeys();
-    } 
     else if (strcmp(token,"help")==0)
     {
       //printUsage();
@@ -249,32 +247,70 @@ void readKeys()
   }
 }
 
-void printKeys()
+void displayText(byte x, byte y, byte textSize, char mtext[64])
 {
-  for(int i=0;i<numKeys;i++)
-  {
-    Serial.print(keys[i].pin);Serial.print(" ");
-    Serial.print(keys[i].lastChangeTime);Serial.print(" ");
-    Serial.print(keys[i].prevVal);Serial.print(" ");
-    Serial.print(keys[i].inTrans);Serial.print(" ");
-    Serial.print(keys[i].active);Serial.print(" ");
-    Serial.println();
-  }  
+      display.clearDisplay();
+      display.setTextSize(textSize);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(x, y);
+      display.println(mtext);
+      display.display();
+}
+
+void statusScreen()
+{ 
+  char tag[5];
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+   
+  display.setCursor(0, 54);
+  display.print("[1]");
+  
+  display.setCursor(36, 54);
+  display.print("[2]");
+  
+  display.setCursor(68, 54);
+  display.print("[3]");
+ 
+  display.setCursor(105, 54);
+  display.print("[4]");
+
+  display.setCursor(105, 28);
+  display.print("[5]");
+
+  display.setCursor(85, 0);
+  display.print(mode=='k'?"KBD ON":"KBD OFF");
+  
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+  display.print("1."); display.print(pdb[0].tag);
+  display.setCursor(0,15);
+  display.print("2."); display.print(pdb[1].tag);
+  display.setCursor(0,30);
+  display.print("3."); display.print(pdb[2].tag);
+  display.setCursor(55,15);
+  display.print("4."); display.print(pdb[3].tag);
+  display.setCursor(55,30);
+  display.print("5."); display.print(pdb[4].tag);
+
+  
+  display.display();
 }
 
 // SETUP HERE
 void setup() {
-  Serial.begin(9600);
-  while (!Serial) ;
-
+  
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC)) {
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
   }
-  display.clearDisplay();
-  display.drawPixel(10, 10, SSD1306_WHITE);
-  display.display();
+  //display.setFont(&Org_01);
+  displayText(0, 0, 1, "Waiting for serial connection...");
+
+  Serial.begin(9600);
+  while (!Serial) ;
   Serial.print("Keys on pins: ");
   for(int i;i<numKeys;i++)
   {
@@ -287,7 +323,7 @@ void setup() {
 }
 
 void loop() {
-    int sum=0;
+    
     bytesRead = serialReadln(buff, BUFSIZE);
     if(bytesRead)
     {
@@ -324,25 +360,17 @@ void loop() {
       Serial.println("Keyboard on.");Serial.print( "> " );
       Keyboard.begin();
       mode='k';
-      display.clearDisplay();
-      display.setTextSize(2);
-      display.setTextColor(SSD1306_WHITE);
-      display.setCursor(10, 0);
-      display.println(F("Keys ON"));
-      display.display();      // Show in
     }
     else if( (keys[5].active) && mode=='k')
     {
       Serial.println("Keyboard off.");Serial.print( "> " );
       Keyboard.end();
       mode='s';
-      display.clearDisplay();
-      display.setTextSize(2);
-      display.setTextColor(SSD1306_WHITE);
-      display.setCursor(10, 0);
-      display.println(F("Keys OFF"));
-      display.display();      // Show in
     }
 
-//    display.display();
+    if((millis() - lastScreenUpdate)> SCREEN_REFRESH)
+    {
+      statusScreen();
+      lastScreenUpdate = millis();
+    }
 }
