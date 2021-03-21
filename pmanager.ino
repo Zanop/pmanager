@@ -5,6 +5,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 // #include <Fonts/Org_01.h>
+#include <AESLib.h>
 
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -32,6 +33,7 @@ char mode='s';
 char buff[BUFSIZE]="\0";
 int bytesRead=0;
 unsigned long lastScreenUpdate;
+char smsg[11]="KBD OFF";
 
 struct pentry 
 {
@@ -62,19 +64,18 @@ struct key keys[] =
 };
 unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 
-/*
+
 void printUsage()
 {
-  Serial.println("Commands: add | print | pk | help");
+  Serial.println("Commands: add | print | help | save");
   Serial.println("Usage:");
   Serial.println(" add INDEX NAME LOGIN PASSWORD");
   Serial.println("INDEX := [0..9]; NAME := STRING[10], LOGIN := STRING[25], PASSWORD := STRING[25]");
   Serial.println("Addin over used index overwrites the entry!");
   Serial.println("print - prints the database.");
-  Serial.println("pk - prints the keys (debug info)");
   Serial.println("help - prints this.");
 }
-*/
+
 void serialPrintpdb()
 {
   // Print header
@@ -186,6 +187,14 @@ int serialCmd(char * buff)
       #endif
       serialPrintpdb();
     }
+    else if (strcmp(token,"save")==0)
+    {
+      ;;
+    }
+    else if (strcmp(token,"load")==0)
+    {
+      ;;
+    }
     else if (strcmp(token,"help")==0)
     {
       //printUsage();
@@ -216,7 +225,8 @@ void readKeys()
       {
         keys[i].inTrans = true;
         #if (DEBUG > 0)
-        Serial.println("[TRANS]");
+        Serial.print("[TRANS] ");
+        Serial.println(i);
         #endif
       }
       else
@@ -225,7 +235,8 @@ void readKeys()
         keys[i].inTrans = false;
         keys[i].active=false;
         #if (DEBUG > 0)
-        Serial.println("[RELEASE]");
+        Serial.print("[RELEASE] ");
+        Serial.println(i);
         #endif
       }
       keys[i].prevVal = currentVal;
@@ -280,7 +291,7 @@ void statusScreen()
   display.print("[5]");
 
   display.setCursor(85, 0);
-  display.print(mode=='k'?"KBD ON":"KBD OFF");
+  display.print(smsg);
   
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0,0);
@@ -307,16 +318,20 @@ void setup() {
     for(;;); // Don't proceed, loop forever
   }
   //display.setFont(&Org_01);
-  displayText(0, 0, 1, "Waiting for serial connection...");
+  //displayText(0, 0, 1, "Waiting for serial connection...");
 
   Serial.begin(9600);
-  while (!Serial) ;
-  Serial.print("Keys on pins: ");
+
+  /*
+   while (!Serial) ;
+   Serial.print("Keys on pins: ");
+  */
   for(int i;i<numKeys;i++)
   {
     pinMode(keys[i].pin, INPUT_PULLUP);
     Serial.print(keys[i].pin); Serial.print(" ");
   }
+  
   Serial.println();
   Serial.println("Ready.");
   Serial.print( "> " );
@@ -357,15 +372,19 @@ void loop() {
     }
     if(keys[5].active && mode=='s')
     {
-      Serial.println("Keyboard on.");Serial.print( "> " );
+      
       Keyboard.begin();
       mode='k';
+      strcpy(smsg, "KBD ON");
+      Serial.println("Keyboard on.");Serial.print( "> " );
+      
     }
     else if( (keys[5].active) && mode=='k')
     {
-      Serial.println("Keyboard off.");Serial.print( "> " );
       Keyboard.end();
       mode='s';
+      strcpy(smsg, "KBD OFF");
+      Serial.println("Keyboard off.");Serial.print( "> " );
     }
 
     if((millis() - lastScreenUpdate)> SCREEN_REFRESH)
