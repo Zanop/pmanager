@@ -67,14 +67,16 @@ unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 
 void printUsage()
 {
-  Serial.println("Commands: add | print | help | save");
+  Serial.println("Commands: add | print | help");
   Serial.println("Usage:");
-  Serial.println(" add INDEX NAME LOGIN PASSWORD");
-  Serial.println("INDEX := [0..9]; NAME := STRING[10], LOGIN := STRING[25], PASSWORD := STRING[25]");
-  Serial.println("Addin over used index overwrites the entry!");
+  Serial.println("add INDEX TAG PASSWORD");
+  //Serial.println("INDEX := [0..5]; TAG := STRING[10], PASSWORD := STRING[25]");
+  //Serial.println("Addin over used index overwrites the entry!");
   Serial.println("print - prints the database.");
-  Serial.println("help - prints this.");
+  //Serial.println("pk - prints the keys (debug info)");
+  //Serial.println("help - prints this.");
 }
+
 
 void serialPrintpdb()
 {
@@ -197,7 +199,7 @@ int serialCmd(char * buff)
     }
     else if (strcmp(token,"help")==0)
     {
-      //printUsage();
+      printUsage();
     }
     else
     {
