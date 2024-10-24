@@ -69,14 +69,14 @@ unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 
 void printUsage()
 {
-  Serial.println("Commands: add | print | help | save | load");
-  Serial.println("Usage:");
-  Serial.println("add INDEX TAG PASSWORD");
-  //Serial.println("INDEX := [0..5]; TAG := STRING[10], PASSWORD := STRING[25]");
-  //Serial.println("Addin over used index overwrites the entry!");
-  Serial.println("print - prints the database.");
-  //Serial.println("save - save db to EEPROM");
-  //Serial.println("load - load db from EEPROM");
+  Serial.println(F("Commands: add | print | help | save | load"));
+  Serial.println(F("Usage:"));
+  Serial.println(F("add INDEX TAG PASSWORD"));
+  Serial.println(F("INDEX := [0..5]; TAG := STRING[10], PASSWORD := STRING[25]"));
+  Serial.println(F("Addin over used index overwrites the entry!"));
+  Serial.println(F("print - prints the database."));
+  Serial.println(F("save - save db to EEPROM"));
+  Serial.println(F("load - load db from EEPROM"));
 }
 
 
@@ -84,12 +84,12 @@ void serialPrintpdb()
 {
   // Print header
   // Serial.println("ID\tTAG\tLOGIN\tPASS");
-  Serial.println("ID\tTAG\tPASS");
+  Serial.println(F("ID\tTAG\tPASS"));
   for(int i=0;i<PDBSIZE;i++)
   {
     Serial.print(i+1); Serial.print("\t");
     Serial.print(pdb[i].tag); Serial.print("\t");
-    if(strlen(pdb[i].pass)) Serial.print("************"); 
+    if(strlen(pdb[i].pass)) Serial.print(F("************")); 
     Serial.println();
   }
 }
@@ -150,14 +150,14 @@ int serialCmd(char * buff)
       {
         if( isdigit(token[j]) )
           continue;
-        Serial.println("ID must be a number!");
+        Serial.println(F("ID must be a number!"));
         return(10);
       }
       tmpid = atoi(token)-1;
       
       if(tmpid>PDBSIZE-1 || tmpid <0)
       {
-        Serial.println("entry id out of range!");
+        Serial.println(F("entry id out of range!"));
         return(20);
       }
       // Read NAME
@@ -178,7 +178,7 @@ int serialCmd(char * buff)
     else if ( strcmp(token,"del")==0)
     {
       #if (DEBUG > 0)
-      Serial.println("Delete");
+      Serial.println(F("Delete"));
       #endif
       //digitalWrite(10, HIGH);   // turn the LED on (HIGH is the voltage level)
       //delay(30);                       // wait for a second
@@ -189,14 +189,14 @@ int serialCmd(char * buff)
     else if ( strcmp(token, "print")==0 )
     {
       #if (DEBUG > 0)
-      Serial.println("PrintDB");
+      Serial.println(F("PrintDB"));
       #endif
       serialPrintpdb();
     }
     else if (strcmp(token,"save")==0)
     {
-      Serial.println("Save to EEPROM");
-      Serial.print("Pdbsize "); Serial.print(sizeof(pdb));
+      Serial.println(F("Save to EEPROM"));
+      Serial.print(F("Pdbsize ")); Serial.print(sizeof(pdb));
       //char c[2];
       //for(int i=0;i<PDBSIZE;i++)
       //{
@@ -217,7 +217,7 @@ int serialCmd(char * buff)
     else
     {
       #if (DEBUG > 0)
-      Serial.println("Default");
+      Serial.println(F("Default"));
       #endif
     }
 }
@@ -240,7 +240,7 @@ void readKeys()
       {
         keys[i].inTrans = true;
         #if (DEBUG > 0)
-        Serial.print("[TRANS] ");
+        Serial.print(F("[TRANS] "));
         Serial.println(i);
         #endif
       }
@@ -250,7 +250,7 @@ void readKeys()
         keys[i].inTrans = false;
         keys[i].active=false;
         #if (DEBUG > 0)
-        Serial.print("[RELEASE] ");
+        Serial.print(F("[RELEASE] "));
         Serial.println(i);
         #endif
       }
@@ -266,7 +266,7 @@ void readKeys()
       keys[i].active=true;
       keys[i].inTrans=false;
       #if (DEBUG > 0)
-      Serial.println("[ACTIVE]");
+      Serial.println(F("[ACTIVE]"));
       #endif
     }
  
@@ -362,8 +362,8 @@ void setup() {
   }
   
   Serial.println();
-  Serial.println("Ready.");
-  Serial.print( "> " );
+  Serial.println(F("Ready."));
+  Serial.print( F("> ") );
 }
 
 void loop() {
@@ -376,7 +376,7 @@ void loop() {
       #endif /* DEBUG */
       bytesRead=0;
       serialCmd(buff);
-      Serial.print( "> " );
+      Serial.print( F("> ") );
     }
     readKeys();
     if(keys[0].active && mode=='k')
@@ -405,7 +405,7 @@ void loop() {
       Keyboard.begin();
       mode='k';
       strcpy(smsg, "KBD ON");
-      Serial.println("Keyboard on.");Serial.print( "> " );
+      Serial.println(F("Keyboard on."));Serial.print( F("> ") );
       
     }
     else if( (keys[5].active) && mode=='k')
@@ -414,7 +414,7 @@ void loop() {
       mode='m';
       //strcpy(smsg, "KBD OFF");
       strcpy(smsg, "~(_)8> ");
-      Serial.println("Keyboard off.");Serial.print( "> " );
+      Serial.println(F("Keyboard off."));Serial.print(F("> "));
       Mouse.begin();
     } else if( (keys[5].active) && mode=='m')
     {
