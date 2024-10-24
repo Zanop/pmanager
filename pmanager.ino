@@ -1,11 +1,13 @@
 #include <ctype.h>
 #include "Keyboard.h"
+#include <Mouse.h>
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 // #include <Fonts/Org_01.h>
-#include <AESLib.h>
+// #include <AESLib.h>
+#include <EEPROM.h>
 
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -31,7 +33,7 @@ int incomingByte = 0; // for incoming serial data
 int serialbytesRead=0;
 char mode='s';
 char buff[BUFSIZE]="\0";
-int bytesRead=0;
+int bytesRead=0, mousedir=0, mousecount=0;
 unsigned long lastScreenUpdate;
 char smsg[11]="KBD OFF";
 
@@ -67,14 +69,14 @@ unsigned short numKeys = sizeof(keys)/sizeof(keys[0]);
 
 void printUsage()
 {
-  Serial.println("Commands: add | print | help");
+  Serial.println("Commands: add | print | help | save | load");
   Serial.println("Usage:");
   Serial.println("add INDEX TAG PASSWORD");
   //Serial.println("INDEX := [0..5]; TAG := STRING[10], PASSWORD := STRING[25]");
   //Serial.println("Addin over used index overwrites the entry!");
   Serial.println("print - prints the database.");
-  //Serial.println("pk - prints the keys (debug info)");
-  //Serial.println("help - prints this.");
+  //Serial.println("save - save db to EEPROM");
+  //Serial.println("load - load db from EEPROM");
 }
 
 
@@ -132,8 +134,9 @@ int serialCmd(char * buff)
     char* token;
     
     token = strtok(buff, IFS);
+    #if (DEBUG > 0)
     Serial.println(token);
-
+    #endif
     // Add new passwrd entry
     if( strcmp(token,"add")==0 )
     {
@@ -160,7 +163,7 @@ int serialCmd(char * buff)
       // Read NAME
       token = strtok(NULL, IFS);
       strncpy(pdb[tmpid].tag, token, 6);
-      pdb[tmpid].tag[6]='\0';
+      //pdb[tmpid].tag[6]='\0';
       /*
       // Read LOGIN
       token = strtok(NULL, IFS);
@@ -169,7 +172,7 @@ int serialCmd(char * buff)
       // Read PASS
       token = strtok(NULL, IFS);
       strncpy(pdb[tmpid].pass, token, 24);
-      pdb[tmpid].pass[24]='\0';
+      //pdb[tmpid].pass[24]='\0';
     }
     // Delete entry( probably never gonna be used)
     else if ( strcmp(token,"del")==0)
@@ -177,9 +180,10 @@ int serialCmd(char * buff)
       #if (DEBUG > 0)
       Serial.println("Delete");
       #endif
-      digitalWrite(10, HIGH);   // turn the LED on (HIGH is the voltage level)
-      delay(30);                       // wait for a second
-      digitalWrite(10, LOW);    // turn the LED off by making the voltage LOW
+      //digitalWrite(10, HIGH);   // turn the LED on (HIGH is the voltage level)
+      //delay(30);                       // wait for a second
+      //digitalWrite(10, LOW);    // turn the LED off by making the voltage LOW
+      
     }
     //Print the database to the serial port
     else if ( strcmp(token, "print")==0 )
@@ -191,10 +195,19 @@ int serialCmd(char * buff)
     }
     else if (strcmp(token,"save")==0)
     {
+      Serial.println("Save to EEPROM");
+      Serial.print("Pdbsize "); Serial.print(sizeof(pdb));
+      //char c[2];
+      //for(int i=0;i<PDBSIZE;i++)
+      //{
+        EEPROM.put(0,pdb)
+      //}
+      
       ;;
     }
     else if (strcmp(token,"load")==0)
     {
+      EEPROM.get(0,pdb)
       ;;
     }
     else if (strcmp(token,"help")==0)
@@ -311,6 +324,20 @@ void statusScreen()
   display.display();
 }
 
+void moveMouse()
+{
+  if(mousedir==0)
+  {
+    Mouse.move(1,0,0);
+    mousedir=1;
+  }
+  else
+  {
+    Mouse.move(-1,0,0);
+    mousedir=0;
+  }
+}
+
 // SETUP HERE
 void setup() {
   
@@ -384,11 +411,24 @@ void loop() {
     else if( (keys[5].active) && mode=='k')
     {
       Keyboard.end();
-      mode='s';
-      strcpy(smsg, "KBD OFF");
+      mode='m';
+      //strcpy(smsg, "KBD OFF");
+      strcpy(smsg, "~(_)8> ");
       Serial.println("Keyboard off.");Serial.print( "> " );
+      Mouse.begin();
+    } else if( (keys[5].active) && mode=='m')
+    {
+      strcpy(smsg, "KBD OFF");
+      Mouse.end();
+      mode='s';
     }
-
+    if(mode == 'm' && mousecount>10000)
+    {
+      moveMouse();
+      mousecount=0;
+    }
+    mousecount++;
+      
     if((millis() - lastScreenUpdate)> SCREEN_REFRESH)
     {
       statusScreen();
