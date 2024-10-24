@@ -29,10 +29,10 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
 
 #define DEBUG 0
 
+char buff[BUFSIZE]="\0";
 int incomingByte = 0; // for incoming serial data
 int serialbytesRead=0;
 char mode='s';
-char buff[BUFSIZE]="\0";
 int bytesRead=0, mousedir=0, mousecount=0;
 unsigned long lastScreenUpdate;
 char smsg[11]="KBD OFF";
@@ -128,12 +128,12 @@ int serialReadln(char * buf, int len)
   return(0);
  }
 
-int serialCmd(char * buff)
+int serialCmd(char * buf)
 {
     int tmpid;
     char* token;
     
-    token = strtok(buff, IFS);
+    token = strtok(buf, IFS);
     #if (DEBUG > 0)
     Serial.println(token);
     #endif
@@ -340,7 +340,8 @@ void moveMouse()
 
 // SETUP HERE
 void setup() {
-  
+
+  Serial.begin(9600);
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC)) {
     Serial.println(F("SSD1306 allocation failed"));
@@ -348,8 +349,6 @@ void setup() {
   }
   //display.setFont(&Org_01);
   //displayText(0, 0, 1, "Waiting for serial connection...");
-
-  Serial.begin(9600);
 
   /*
    while (!Serial) ;
